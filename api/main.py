@@ -22,9 +22,19 @@ app.add_middleware(
 # Vercel injects the internal backend service URL into BACKEND_URL via bindings
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000").rstrip("/")
 
-@app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"])
-async def proxy_api(request: Request, path: str):
-    target_url = f"{BACKEND_URL}/api/{path}"
+@app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"])
+async def proxy_gateway(request: Request, full_path: str):
+    # Normalize path: ensure request is routed to /api/{subpath} on internal backend
+    if full_path.startswith("api/"):
+        target_path = full_path
+    elif full_path == "health":
+        target_path = "api/health"
+    elif full_path:
+        target_path = f"api/{full_path}"
+    else:
+        target_path = "api/health"
+
+    target_url = f"{BACKEND_URL}/{target_path}"
     if request.url.query:
         target_url += f"?{request.url.query}"
         
@@ -32,29 +42,28 @@ async def proxy_api(request: Request, path: str):
         body = await request.body()
         headers = {k: v for k, v in request.headers.items() if k.lower() not in ["host", "content-length"]}
         
-        resp = await client.request(
-            method=request.method,
-            url=target_url,
-            headers=headers,
-            content=body
-        )
-        
-        # Filter hop-by-hop headers
-        resp_headers = {
-            k: v for k, v in resp.headers.items() 
-            if k.lower() not in ["content-encoding", "transfer-encoding", "content-length"]
-        }
-        
-        return Response(
-            content=resp.content,
-            status_code=resp.status_code,
-            headers=resp_headers,
-            media_type=resp.headers.get("content-type")
-        )
-
-@app.get("/health")
-async def gateway_health():
-    return {
-        "gateway": "healthy",
-        "backendUrl": BACKEND_URL
-    }
+        try:
+            resp = await client.request(
+                method=request.method,
+                url=target_url,
+                headers=headers,
+                content=body
+            )
+            
+            resp_headers = {
+                k: v for k, v in resp.headers.items() 
+                if k.lower() not in ["content-encoding", "transfer-encoding", "content-length"]
+            }
+            
+            return Response(
+                content=resp.content,
+                status_code=resp.status_code,
+                headers=resp_headers,
+                media_type=resp.headers.get("content-type")
+            )
+        except Exception as e:
+            return Response(
+                content=f'{{"error": "Failed to reach internal backend service", "details": "{str(e)}", "backendUrl": "{BACKEND_URL}"}}',
+                status_code=502,
+                media_type="application/json"
+            )
