@@ -1,7 +1,7 @@
 """
-Core Metrics and Risk Buffer Engine for UK Wind Day-Ahead Decisions.
-Uses pure Python and NumPy for zero-dependency, ultra-fast calculations.
-No pandas in runtime to ensure lightweight Vercel serverless deployment (<20MB).
+Core Metrics, Baselines, and Risk Buffer Engine for UK Wind Day-Ahead Decisions.
+Uses pure Python and NumPy for zero-dependency, ultra-fast calculations (<15ms).
+No pandas or heavy dependencies in runtime to ensure lightweight Vercel serverless deployment (<20MB).
 """
 
 import os
@@ -142,10 +142,10 @@ def compute_diurnal_breakdown(records):
         })
     return diurnal
 
-def compute_rolling_risk_buffer(all_data, cutoff="11", quantile_level=0.90, min_sample=48):
+def compute_rolling_risk_buffer(all_data, cutoff="11", quantile_level=0.90, min_sample=48, apply_bias_correction=False):
     """
     Computes the strictly out-of-sample rolling risk buffer for delivery days Jan 2 to Feb 1.
-    For target day D, training window is strictly days <= D-2 using the same cutoff.
+    For target day D, training window is strictly completed days <= D-2 using the same cutoff.
     """
     cutoff_str = str(cutoff)
     all_sorted = sorted(all_data, key=lambda x: x['startTime'])
@@ -181,11 +181,15 @@ def compute_rolling_risk_buffer(all_data, cutoff="11", quantile_level=0.90, min_
         day_hourly = []
         is_pooled = len(train_errors) < min_sample
         
+        rolling_bias = float(np.mean(train_errors)) if len(train_errors) > 0 else 0.0
+        train_calc_errors = (train_errors - rolling_bias) if apply_bias_correction else train_errors
+        
         if is_pooled:
-            buf_val = max(0.0, float(np.quantile(train_errors, quantile_level))) if len(train_errors) > 0 else 0.0
+            buf_val = max(0.0, float(np.quantile(train_calc_errors, quantile_level))) if len(train_calc_errors) > 0 else 0.0
             for r in target_records:
                 act = r['actualMW']
-                fcst = r['cutoffs'][cutoff_str]['forecastMW']
+                raw_fcst = r['cutoffs'][cutoff_str]['forecastMW']
+                fcst = (raw_fcst - rolling_bias) if apply_bias_correction else raw_fcst
                 err = fcst - act
                 shortfall = max(0.0, err)
                 is_cov = shortfall <= buf_val
@@ -202,7 +206,8 @@ def compute_rolling_risk_buffer(all_data, cutoff="11", quantile_level=0.90, min_
                     'hour': r['hourOfDay'],
                     'startTime': r['startTime'],
                     'actualMW': act,
-                    'forecastMW': fcst,
+                    'forecastMW': raw_fcst,
+                    'hedgedForecastMW': round(fcst, 1),
                     'bufferMW': round(buf_val, 1),
                     'shortfallMW': round(shortfall, 1),
                     'isCovered': is_cov,
@@ -210,17 +215,18 @@ def compute_rolling_risk_buffer(all_data, cutoff="11", quantile_level=0.90, min_
                 })
         else:
             med_fcst = float(np.median(train_fcsts))
-            low_errors = train_errors[train_fcsts <= med_fcst]
-            high_errors = train_errors[train_fcsts > med_fcst]
+            low_errors = train_calc_errors[train_fcsts <= med_fcst]
+            high_errors = train_calc_errors[train_fcsts > med_fcst]
             
-            buf_low = max(0.0, float(np.quantile(low_errors, quantile_level))) if len(low_errors) >= 10 else max(0.0, float(np.quantile(train_errors, quantile_level)))
-            buf_high = max(0.0, float(np.quantile(high_errors, quantile_level))) if len(high_errors) >= 10 else max(0.0, float(np.quantile(train_errors, quantile_level)))
+            buf_low = max(0.0, float(np.quantile(low_errors, quantile_level))) if len(low_errors) >= 10 else max(0.0, float(np.quantile(train_calc_errors, quantile_level)))
+            buf_high = max(0.0, float(np.quantile(high_errors, quantile_level))) if len(high_errors) >= 10 else max(0.0, float(np.quantile(train_calc_errors, quantile_level)))
             
             for r in target_records:
                 act = r['actualMW']
-                fcst = r['cutoffs'][cutoff_str]['forecastMW']
-                regime = 'High Wind (>Med)' if fcst > med_fcst else 'Low Wind (<=Med)'
-                buf_val = buf_high if fcst > med_fcst else buf_low
+                raw_fcst = r['cutoffs'][cutoff_str]['forecastMW']
+                fcst = (raw_fcst - rolling_bias) if apply_bias_correction else raw_fcst
+                regime = 'High Wind (>Med)' if raw_fcst > med_fcst else 'Low Wind (<=Med)'
+                buf_val = buf_high if raw_fcst > med_fcst else buf_low
                 err = fcst - act
                 shortfall = max(0.0, err)
                 is_cov = shortfall <= buf_val
@@ -237,7 +243,8 @@ def compute_rolling_risk_buffer(all_data, cutoff="11", quantile_level=0.90, min_
                     'hour': r['hourOfDay'],
                     'startTime': r['startTime'],
                     'actualMW': act,
-                    'forecastMW': fcst,
+                    'forecastMW': raw_fcst,
+                    'hedgedForecastMW': round(fcst, 1),
                     'bufferMW': round(buf_val, 1),
                     'shortfallMW': round(shortfall, 1),
                     'isCovered': is_cov,
@@ -252,19 +259,48 @@ def compute_rolling_risk_buffer(all_data, cutoff="11", quantile_level=0.90, min_
             'hours': day_hourly
         })
         
+    # Weekly coverage breakdown
+    weeks_def = [
+        ("Week 1 (Warm-up, Jan 2 - Jan 8)", "2026-01-02", "2026-01-08"),
+        ("Week 2 (Jan 9 - Jan 15)", "2026-01-09", "2026-01-15"),
+        ("Week 3 (Jan 16 - Jan 22)", "2026-01-16", "2026-01-22"),
+        ("Week 4 (Jan 23 - Jan 29)", "2026-01-23", "2026-01-29"),
+        ("Week 5 (Jan 30 - Feb 1)", "2026-01-30", "2026-02-01"),
+    ]
+    weekly_breakdown = []
+    for w_name, w_start, w_end in weeks_def:
+        w_days = [d for d in daily_results if w_start <= d['date'] <= w_end]
+        if w_days:
+            w_cov = float(np.mean([d['dayCoveragePercent'] for d in w_days]))
+            w_buf = float(np.mean([d['avgBufferMW'] for d in w_days]))
+            weekly_breakdown.append({
+                'week': w_name,
+                'startDate': w_start,
+                'endDate': w_end,
+                'realizedCoveragePercent': round(w_cov, 1),
+                'avgBufferMW': round(w_buf, 1)
+            })
+
+    post_warmup_days = [d for d in daily_results if d['date'] >= '2026-01-09']
+    post_warmup_cov = float(np.mean([d['dayCoveragePercent'] for d in post_warmup_days])) if post_warmup_days else 0.0
+
     return {
+        'nominalQuantile': quantile_level,
+        'nominalCoveragePercent': round(quantile_level * 100.0, 1),
         'overallCoveragePercent': round(float(np.mean(covered_all)) * 100.0, 1) if covered_all else 0.0,
+        'postWarmupCoveragePercent': round(post_warmup_cov, 1),
         'shortfallOnlyCoveragePercent': round(float(np.mean(covered_shortfall_only)) * 100.0, 1) if covered_shortfall_only else 0.0,
         'averageBufferMW': round(float(np.mean(all_buffers)), 1) if all_buffers else 0.0,
         'meanUncoveredShortfallMW': round(float(np.mean(uncovered_shortfall_mw)), 1) if uncovered_shortfall_mw else 0.0,
         'totalHours': len(covered_all),
+        'weeklyBreakdown': weekly_breakdown,
         'daily': daily_results
     }
 
 def compute_lead_time_curve(lead_time_records, bin_size_hours=6):
     """
     Computes forecast accuracy degradation curve as lead time increases.
-    Population: ALL forecast vintages matched against actuals.
+    Population: ALL forward forecast vintages (0.5h to 66.5h) matched against actuals.
     """
     bins = {}
     for r in lead_time_records:

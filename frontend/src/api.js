@@ -22,8 +22,8 @@ export async function fetchLeadTimeAnalysis() {
   return res.json();
 }
 
-export async function fetchProcurementSimulation(cutoff = '11', demand = 30000, quantile = 0.90, date = null) {
-  let url = `/api/procurement/simulate?cutoff=${cutoff}&demand_mw=${demand}&quantile=${quantile}`;
+export async function fetchProcurementSimulation(cutoff = '11', demand = 30000, quantile = 0.90, biasCorrection = false, date = null) {
+  let url = `/api/procurement/simulate?cutoff=${cutoff}&demand_mw=${demand}&quantile=${quantile}&bias_correction=${biasCorrection}`;
   if (date) url += `&date=${date}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to simulate procurement');

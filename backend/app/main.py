@@ -7,7 +7,6 @@ import os
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 
 from backend.app.metrics import (
     load_aligned_data,
@@ -25,7 +24,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS for local Vite dev server
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -34,11 +32,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory cache of aligned data (loads in ~15ms)
 ALIGNED_DATA = load_aligned_data()
 LEAD_TIME_RECORDS = load_lead_time_records()
 
-# Half-hourly actuals cache
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
 HH_PATH = os.path.join(DATA_DIR, "half_hourly_actuals.json")
 HALF_HOURLY_ACTUALS = {}
@@ -64,7 +60,7 @@ def health():
 @app.get("/api/day-ahead")
 def get_day_ahead(
     date: str = Query("2026-01-15", description="Target delivery date (YYYY-MM-DD)"),
-    cutoff: str = Query("11", description="Day-ahead cutoff hour on D-1 (e.g. 11)")
+    cutoff: str = Query("11", description="Day-ahead cutoff hour on D-1")
 ):
     if cutoff not in SUPPORTED_CUTOFFS:
         raise HTTPException(status_code=400, detail=f"Cutoff {cutoff} not supported. Use one of {SUPPORTED_CUTOFFS}")
@@ -80,11 +76,8 @@ def get_day_ahead(
         
     day_records.sort(key=lambda x: x['hourOfDay'])
     
-    # Format hourly rows
     hours_output = []
-    acts = []
-    fcsts = []
-    errors = []
+    acts, fcsts, errors = [], [], []
     
     for r in day_records:
         c_info = r['cutoffs'][cutoff]
@@ -107,10 +100,8 @@ def get_day_ahead(
             "baseline7dMean": r['baseline7dMean']
         })
         
-    # Extract granular 48 half-hour actuals for this date
     hh_points = []
     for sp in range(1, 49):
-        # settlement period timestamp
         sp_hour = (sp - 1) // 2
         sp_min = 30 if (sp % 2 == 0) else 0
         iso_key = f"{date}T{sp_hour:02d}:{sp_min:02d}:00Z"
@@ -165,7 +156,7 @@ def get_accuracy_summary(
 def get_lead_time_analysis():
     curve = compute_lead_time_curve(LEAD_TIME_RECORDS, bin_size_hours=6)
     return {
-        "description": "Accuracy degradation by lead time across ALL forecast vintages in January 2026",
+        "description": "Accuracy degradation by lead time across ALL forward forecast vintages (0.5h to 66.5h) in January 2026",
         "totalObservations": len(LEAD_TIME_RECORDS),
         "curve": curve
     }
@@ -175,6 +166,7 @@ def simulate_procurement(
     cutoff: str = Query("11", description="Cutoff hour on D-1"),
     demand_mw: float = Query(30000.0, description="Illustrative consumer demand baseline (MW)"),
     quantile: float = Query(0.90, description="Risk confidence quantile (0.50 to 0.99)"),
+    bias_correction: bool = Query(False, description="Apply rolling bias correction"),
     date: str = Query(None, description="Optional single delivery date (YYYY-MM-DD)")
 ):
     if cutoff not in SUPPORTED_CUTOFFS:
@@ -182,9 +174,13 @@ def simulate_procurement(
     if not (0.50 <= quantile <= 0.99):
         raise HTTPException(status_code=400, detail="Quantile must be between 0.50 and 0.99")
         
-    buffer_res = compute_rolling_risk_buffer(ALIGNED_DATA, cutoff=cutoff, quantile_level=quantile)
+    buffer_res = compute_rolling_risk_buffer(
+        ALIGNED_DATA,
+        cutoff=cutoff,
+        quantile_level=quantile,
+        apply_bias_correction=bias_correction
+    )
     
-    # If a specific date is requested, enrich with procurement math
     if date:
         day_match = next((d for d in buffer_res['daily'] if d['date'] == date), None)
         if not day_match:
@@ -193,19 +189,20 @@ def simulate_procurement(
         enriched_hours = []
         for h in day_match['hours']:
             act = h['actualMW']
-            fcst = h['forecastMW']
+            fcst = h.get('hedgedForecastMW', h['forecastMW'])
             buf = h['bufferMW']
             
             base_proc = max(0.0, demand_mw - fcst)
             total_proc = base_proc + buf
             act_res = max(0.0, demand_mw - act)
-            imbalance = total_proc - act_res # positive = surplus sold, negative = deficit bought
+            imbalance = total_proc - act_res
             
             enriched_hours.append({
                 "hour": h['hour'],
                 "startTime": h['startTime'],
                 "actualWindMW": act,
-                "forecastWindMW": fcst,
+                "forecastWindMW": h['forecastMW'],
+                "hedgedForecastMW": fcst,
                 "demandMW": demand_mw,
                 "baseProcurementMW": round(base_proc, 1),
                 "riskBufferMW": round(buf, 1),
@@ -221,22 +218,26 @@ def simulate_procurement(
             "date": date,
             "demandMW": demand_mw,
             "riskQuantile": quantile,
+            "biasCorrectionApplied": bias_correction,
             "isWarmup": day_match['isWarmup'],
             "dayCoveragePercent": day_match['dayCoveragePercent'],
             "avgBufferMW": day_match['avgBufferMW'],
             "hours": enriched_hours
         }
         
-    # Return overall backtest results
     return {
         "cutoffHour": int(cutoff),
         "demandMW": demand_mw,
         "riskQuantile": quantile,
+        "biasCorrectionApplied": bias_correction,
+        "nominalCoveragePercent": buffer_res['nominalCoveragePercent'],
         "overallCoveragePercent": buffer_res['overallCoveragePercent'],
+        "postWarmupCoveragePercent": buffer_res['postWarmupCoveragePercent'],
         "shortfallOnlyCoveragePercent": buffer_res['shortfallOnlyCoveragePercent'],
         "averageBufferMW": buffer_res['averageBufferMW'],
         "meanUncoveredShortfallMW": buffer_res['meanUncoveredShortfallMW'],
         "totalEvaluatedHours": buffer_res['totalHours'],
+        "weeklyBreakdown": buffer_res['weeklyBreakdown'],
         "dailySummary": [
             {
                 "date": d['date'],
@@ -248,7 +249,6 @@ def simulate_procurement(
         ]
     }
 
-# Mount static frontend build if it exists (for unified Docker and local production)
 FRONTEND_DIST = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
 if os.path.exists(FRONTEND_DIST):
     app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
