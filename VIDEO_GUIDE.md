@@ -98,9 +98,9 @@
 ---
 
 ### Segment 3: Automated Test Suite (7:15 - 8:30)
-* **Screen**: Clean terminal prompt running `python -m pytest -v` showing all 25 tests passing.
+* **Screen**: Clean terminal prompt running `python -m pytest -v` showing all 34 tests passing.
 * **Talking Points**:
-  * 25 unit tests backing the platform:
+  * 34 unit and feature tests backing the platform:
     1. `test_rolling_buffer_zero_leakage_from_future`: Perturbs actuals on D-1 and D by 50,000 MW; verifies the computed buffer for Day D remains 100% bitwise identical.
     2. `test_cutoff_boundary_inclusion_and_exclusion`: Asserts forecasts at exact cutoff are eligible, while cutoff + 1 min is strictly excluded.
     3. `test_lead_time_validity_and_bounds`: Asserts all 18,015 lead-time observations are strictly positive ($0.5\text{h} \le \text{lead} \le 66.5\text{h}$) with valid error definitions.

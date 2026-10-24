@@ -38,16 +38,16 @@ export default function AccuracyLab({ selectedCutoff, onCutoffChange }) {
   if (loading && !summaryData) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-cyan-400"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-700"></div>
       </div>
     );
   }
 
   if (error && !summaryData) {
     return (
-      <div className="p-6 bg-red-950/40 border border-red-800 rounded-xl text-red-200">
-        <p className="font-semibold">Error loading Accuracy metrics:</p>
-        <p className="text-sm mt-1">{error}</p>
+      <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
+        <p className="font-semibold text-sm">Error loading Accuracy metrics:</p>
+        <p className="text-xs mt-0.5">{error}</p>
       </div>
     );
   }
@@ -57,239 +57,240 @@ export default function AccuracyLab({ selectedCutoff, onCutoffChange }) {
 
   return (
     <div className="space-y-6">
-      {/* Scope and Population Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm flex flex-wrap gap-4 items-center justify-between">
+      {/* Header & Cutoff Selector */}
+      <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs flex flex-wrap gap-4 items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <Activity className="w-5 h-5 text-cyan-400" />
-            <h2 className="text-base font-semibold text-slate-100">
-              Quantitative Forecast Accuracy Benchmark: January 2026
+            <Activity className="w-5 h-5 text-blue-700" />
+            <h2 className="text-sm font-semibold text-slate-900">
+              Quantitative Forecast Accuracy Benchmark: January 2026 Decisions
             </h2>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Auditing National Grid ESO WINDFOR vs FUELHH Wind Generation across 744 hourly trading periods
+          <p className="text-xs text-slate-500 mt-0.5">
+            Auditing National Grid ESO WINDFOR against FUELHH Wind Generation across 744 hourly trading periods
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <label className="text-xs text-slate-400 font-medium">Cutoff Assumption:</label>
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Cutoff:</label>
           <select
             value={selectedCutoff}
             onChange={e => onCutoffChange(e.target.value)}
-            className="bg-slate-950 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 focus:outline-none"
+            className="bg-white border border-slate-300 px-3 py-1.5 rounded-md text-xs font-medium text-slate-800 focus:outline-none shadow-xs"
           >
-            <option value="9">09:00 UTC</option>
-            <option value="11">11:00 UTC (Default GB DAM)</option>
-            <option value="12">12:00 UTC</option>
-            <option value="14">14:00 UTC</option>
-            <option value="17">17:00 UTC</option>
-            <option value="23">23:00 UTC</option>
+            <option value="9">09:00 UTC (Early trading)</option>
+            <option value="11">11:00 UTC (GB DAM Benchmark)</option>
+            <option value="12">12:00 UTC (Midday auction close)</option>
+            <option value="14">14:00 UTC (Afternoon revision)</option>
+            <option value="17">17:00 UTC (Evening review)</option>
+            <option value="23">23:00 UTC (End of Day D-1)</option>
           </select>
         </div>
       </div>
 
-      {/* Primary KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <div className="flex justify-between items-center text-slate-400 text-xs uppercase tracking-wider">
-            <span>Mean Absolute Error (MAE)</span>
-            <Gauge className="w-4 h-4 text-cyan-400" />
+      {/* Primary KPI Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            Mean Absolute Error (MAE)
           </div>
-          <div className="mt-2 text-2xl font-bold text-slate-100 font-mono">
-            {summary.maeMW.toLocaleString()} <span className="text-sm font-normal text-slate-400">MW</span>
+          <div className="mt-1 text-2xl font-bold font-mono text-slate-900">
+            {summary.maeMW.toLocaleString()} <span className="text-xs font-normal text-slate-500">MW</span>
           </div>
-          <div className="text-xs text-slate-400 mt-1">
-            WAPE: <span className="text-cyan-400 font-medium">{summary.wapePercent}%</span> of total generation
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <div className="flex justify-between items-center text-slate-400 text-xs uppercase tracking-wider">
-            <span>Root Mean Square Error</span>
-            <TrendingUp className="w-4 h-4 text-indigo-400" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-slate-100 font-mono">
-            {summary.rmseMW.toLocaleString()} <span className="text-sm font-normal text-slate-400">MW</span>
-          </div>
-          <div className="text-xs text-slate-400 mt-1">
-            Penalizes extreme tail misses
+          <div className="mt-1 text-xs text-slate-500">
+            Sample: N={summary.count} delivery hours
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <div className="flex justify-between items-center text-slate-400 text-xs uppercase tracking-wider">
-            <span>Systematic Mean Bias</span>
-            <ShieldAlert className="w-4 h-4 text-amber-400" />
+        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            Root Mean Square Error (RMSE)
           </div>
-          <div className={`mt-2 text-2xl font-bold font-mono ${summary.meanBiasMW > 0 ? 'text-amber-400' : 'text-blue-400'}`}>
-            {summary.meanBiasMW > 0 ? `+${summary.meanBiasMW.toLocaleString()}` : summary.meanBiasMW.toLocaleString()} <span className="text-sm font-normal text-slate-400">MW</span>
+          <div className="mt-1 text-2xl font-bold font-mono text-slate-900">
+            {summary.rmseMW.toLocaleString()} <span className="text-xs font-normal text-slate-500">MW</span>
           </div>
-          <div className="text-xs text-slate-400 mt-1">
-            {summary.meanBiasMW > 0 ? 'Persistent Over-forecasting (Shortfall risk)' : 'Under-forecasting (Surplus)'}
+          <div className="mt-1 text-xs text-slate-500">
+            Penalizes large tail errors
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <div className="flex justify-between items-center text-slate-400 text-xs uppercase tracking-wider">
-            <span>Error Quantile Spread</span>
-            <Compass className="w-4 h-4 text-emerald-400" />
+        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            Mean Bias (Systematic Offset)
           </div>
-          <div className="mt-2 text-sm font-mono text-slate-200">
-            <div>P10: <span className="text-blue-400">{summary.errorQuantiles.p10} MW</span></div>
-            <div>P50: <span className="text-slate-300">{summary.errorQuantiles.p50} MW</span></div>
-            <div>P90: <span className="text-amber-400 font-semibold">{summary.errorQuantiles.p90} MW</span></div>
+          <div className="mt-1 text-2xl font-bold font-mono text-slate-900">
+            {summary.meanBiasMW >= 0 ? `+${summary.meanBiasMW.toLocaleString()}` : summary.meanBiasMW.toLocaleString()}{' '}
+            <span className="text-xs font-normal text-slate-500">MW</span>
+          </div>
+          <div className="mt-1 text-xs text-slate-500">
+            Systematic over-forecasting tendency
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            Weighted Absolute Error (WAPE)
+          </div>
+          <div className="mt-1 text-2xl font-bold font-mono text-slate-900">
+            {summary.wapePercent}%
+          </div>
+          <div className="mt-1 text-xs text-slate-500">
+            Total Absolute Error / Total Generation
           </div>
         </div>
       </div>
 
-      {/* Naive Baselines & Forecast Skill Scores */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-slate-200 mb-1 flex items-center gap-2">
-          <BarChart3 className="w-4 h-4 text-cyan-400" />
-          Benchmark Comparison & Value of Forecast (Forecast Skill Scores)
-        </h3>
-        <p className="text-xs text-slate-400 mb-4">
-          An MAE of ~2,000 MW is only meaningful compared to what a trader could do with simple historical heuristics.
-          We test against two observable baselines known at Day D-1 cutoff.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-slate-950 border border-slate-800 rounded-lg p-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <span className="text-xs font-semibold uppercase text-slate-400">Baseline 1: Persistence (t - 48h)</span>
-                <p className="text-xs text-slate-400 mt-0.5">Same-hour actual observed on Day D-2 (100% observable at cutoff)</p>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-mono text-xs font-bold">
-                +{summary.baseline48h.skillScorePercent}% Skill
-              </span>
+      {/* Observable Baselines & Skill Scores */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs space-y-2">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div>
+              <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">
+                Baseline 1: t - 48h Persistence
+              </h4>
+              <p className="text-[11px] text-slate-500">
+                Observable on Day D-2: y(t-48h). 100% known at D-1 11:00 UTC cutoff
+              </p>
             </div>
-            <div className="mt-3 flex items-baseline gap-4">
-              <div>
-                <span className="text-xs text-slate-400">Baseline MAE:</span>
-                <p className="text-lg font-mono font-semibold text-slate-200">{summary.baseline48h.maeMW.toLocaleString()} MW</p>
-              </div>
-              <div>
-                <span className="text-xs text-slate-400">WINDFOR MAE:</span>
-                <p className="text-lg font-mono font-semibold text-cyan-400">{summary.maeMW.toLocaleString()} MW</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-950 border border-slate-800 rounded-lg p-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <span className="text-xs font-semibold uppercase text-slate-400">Baseline 2: 7-Day Rolling Mean</span>
-                <p className="text-xs text-slate-400 mt-0.5">Average of same hour across past 7 observable days (t-48h through t-192h)</p>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-mono text-xs font-bold">
-                +{summary.baseline7dMean.skillScorePercent}% Skill
-              </span>
-            </div>
-            <div className="mt-3 flex items-baseline gap-4">
-              <div>
-                <span className="text-xs text-slate-400">Baseline MAE:</span>
-                <p className="text-lg font-mono font-semibold text-slate-200">{summary.baseline7dMean.maeMW.toLocaleString()} MW</p>
-              </div>
-              <div>
-                <span className="text-xs text-slate-400">WINDFOR MAE:</span>
-                <p className="text-lg font-mono font-semibold text-cyan-400">{summary.maeMW.toLocaleString()} MW</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Diurnal Error Profile (Hour 0 to 23) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-        <div className="mb-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-200">
-              Diurnal Error Profile by Hour of Day (0 to 23 UTC)
-            </h3>
-            <span className="text-xs text-cyan-400 bg-cyan-950/60 border border-cyan-800 px-2.5 py-1 rounded-md">
-              Population: 744 cutoff-vintage hours
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              +{summary.baseline48h.skillScorePercent}% Skill Score
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Reveals time-of-day error structure. The shaded region denotes the P10-P90 forecast uncertainty band.
+          <div className="grid grid-cols-2 gap-4 pt-1">
+            <div>
+              <span className="text-xs text-slate-500">Baseline MAE:</span>
+              <div className="text-lg font-bold font-mono text-slate-900">{summary.baseline48h.maeMW.toLocaleString()} MW</div>
+            </div>
+            <div>
+              <span className="text-xs text-slate-500">Forecast MAE:</span>
+              <div className="text-lg font-bold font-mono text-blue-700">{summary.maeMW.toLocaleString()} MW</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs space-y-2">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div>
+              <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">
+                Baseline 2: 7-Day Rolling Mean
+              </h4>
+              <p className="text-[11px] text-slate-500">
+                Average of same hour over past 7 observable days (D-8 to D-2)
+              </p>
+            </div>
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              +{summary.baseline7dMean.skillScorePercent}% Skill Score
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 pt-1">
+            <div>
+              <span className="text-xs text-slate-500">Baseline MAE:</span>
+              <div className="text-lg font-bold font-mono text-slate-900">{summary.baseline7dMean.maeMW.toLocaleString()} MW</div>
+            </div>
+            <div>
+              <span className="text-xs text-slate-500">Forecast MAE:</span>
+              <div className="text-lg font-bold font-mono text-blue-700">{summary.maeMW.toLocaleString()} MW</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Error Quantiles Bar */}
+      <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs space-y-2">
+        <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+          Forecast Error Quantile Distribution (Forecast - Actual, MW)
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div className="bg-slate-50 border border-slate-200 rounded p-3 text-center">
+            <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">P10 (Severe Under-forecast)</span>
+            <div className="text-xl font-bold font-mono text-slate-800 mt-1">{summary.errorQuantiles.p10.toLocaleString()} MW</div>
+            <span className="text-[11px] text-slate-500">10% of errors fall below this value</span>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded p-3 text-center">
+            <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">P50 (Median Error)</span>
+            <div className="text-xl font-bold font-mono text-slate-800 mt-1">+{summary.errorQuantiles.p50.toLocaleString()} MW</div>
+            <span className="text-[11px] text-slate-500">Median error across all trading hours</span>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded p-3 text-center">
+            <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">P90 (Severe Shortfall Risk)</span>
+            <div className="text-xl font-bold font-mono text-amber-700 mt-1">+{summary.errorQuantiles.p90.toLocaleString()} MW</div>
+            <span className="text-[11px] text-slate-500">90% of shortfalls fall below this threshold</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Diurnal Error Curve */}
+      <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs space-y-3">
+        <div className="border-b border-slate-100 pb-2">
+          <h3 className="text-sm font-semibold text-slate-900">
+            Diurnal Forecast Error Profile by Hour of Day
+          </h3>
+          <p className="text-xs text-slate-500">
+            Comparing MAE and Mean Bias across each hour of the 24-hour cycle to assess intraday error patterns
           </p>
         </div>
 
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={diurnalProfile} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="hour" stroke="#64748b" tickFormatter={h => `${h}:00`} fontSize={12} />
-              <YAxis stroke="#64748b" fontSize={12} unit=" MW" />
+            <BarChart data={diurnalProfile} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="hourOfDay" stroke="#64748b" tickFormatter={h => `${h}:00`} fontSize={11} tickLine={false} />
+              <YAxis stroke="#64748b" fontSize={11} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tickLine={false} />
               <Tooltip
-                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
-                labelFormatter={h => `Hour ${h}:00 UTC`}
+                contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '6px', fontSize: '12px' }}
                 formatter={(val, name) => [`${Number(val).toLocaleString()} MW`, name]}
+                labelFormatter={h => `Hour ${h}:00 - ${Number(h) + 1}:00`}
               />
-              <Legend wrapperStyle={{ paddingTop: '8px' }} />
-              <Area
-                type="monotone"
-                dataKey="p90MW"
-                name="P90 Upper Error Bound"
-                stroke="#f59e0b"
-                fill="#f59e0b"
-                fillOpacity={0.15}
-              />
-              <Line
-                type="monotone"
-                dataKey="maeMW"
-                name="Mean Absolute Error (MAE)"
-                stroke="#06b6d4"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="meanBiasMW"
-                name="Mean Bias"
-                stroke="#ec4899"
-                strokeWidth={1.5}
-                strokeDasharray="3 3"
-                dot={false}
-              />
-              <ReferenceLine y={0} stroke="#475569" />
-            </AreaChart>
+              <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '12px' }} />
+              <Bar dataKey="maeMW" name="MAE (MW)" fill="#2563eb" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="meanBiasMW" name="Mean Bias (MW)" fill="#d97706" radius={[2, 2, 0, 0]} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Lead-Time Error Decay Curve */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-        <div className="mb-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-200">
-              Forecast Horizon Degradation Curve (Lead Time Decay)
-            </h3>
-            <span className="text-xs text-indigo-400 bg-indigo-950/60 border border-indigo-800 px-2.5 py-1 rounded-md">
-              Population: {totalObservations.toLocaleString()} forecast runs across all horizons
-            </span>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Quantifying how forecast accuracy degrades as lead time increases from intraday (0-6h) up to 60+ hours ahead.
+      {/* Lead-Time Degradation Curve */}
+      <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs space-y-3">
+        <div className="border-b border-slate-100 pb-2">
+          <h3 className="text-sm font-semibold text-slate-900">
+            Forecast Accuracy Degradation vs Lead Time Horizon
+          </h3>
+          <p className="text-xs text-slate-500">
+            Auditing 18,015 forward forecast records across lead horizons from 0.5h to 66.5h ahead of delivery
           </p>
         </div>
 
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={leadTimeCurve} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="leadTimeBin" stroke="#64748b" fontSize={12} />
-              <YAxis stroke="#64748b" fontSize={12} unit=" MW" />
+            <LineChart data={leadTimeCurve} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="leadTimeBin" stroke="#64748b" fontSize={11} tickLine={false} />
+              <YAxis stroke="#64748b" fontSize={11} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tickLine={false} />
               <Tooltip
-                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
+                contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '6px', fontSize: '12px' }}
                 formatter={(val, name) => [`${Number(val).toLocaleString()} MW`, name]}
-                labelFormatter={l => `Lead Time Bin: ${l}`}
               />
-              <Legend wrapperStyle={{ paddingTop: '8px' }} />
-              <Bar dataKey="maeMW" name="MAE (MW)" fill="#06b6d4" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="rmseMW" name="RMSE (MW)" fill="#6366f1" radius={[4, 4, 0, 0]} />
-            </BarChart>
+              <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '12px' }} />
+              <Line
+                type="monotone"
+                dataKey="maeMW"
+                name="MAE by Horizon (MW)"
+                stroke="#1e3a8a"
+                strokeWidth={2.5}
+                dot={{ r: 3 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="rmseMW"
+                name="RMSE (MW)"
+                stroke="#7c3aed"
+                strokeWidth={1.5}
+                strokeDasharray="3 3"
+                dot={{ r: 2 }}
+              />
+            </LineChart>
           </ResponsiveContainer>
         </div>
       </div>

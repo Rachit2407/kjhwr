@@ -3,7 +3,7 @@
 > **A customized decision support and quantitative forecast accuracy engine for UK Day-Ahead wholesale power procurement.**  
 > Built for the **Full Stack SWE Challenge**.
 
-[![Pytest Tests](https://img.shields.io/badge/pytest-25%20passed-emerald)](tests/)
+[![Pytest Tests](https://img.shields.io/badge/pytest-34%20passed-emerald)](tests/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](Dockerfile)
 [![License](https://img.shields.io/badge/license-MIT-slate)](LICENSE)
 
@@ -225,7 +225,8 @@ Access the application at `http://localhost:8000`.
 python -m pytest -v
 ```
 
-25 passing unit tests:
+34 passing unit and feature tests:
+- `tests/test_feature_matrix_expectations.py`: Comprehensive automated verification of every challenge requirement (scope lock, Elexon BMRS sources, cutoff cadence, baselines, diurnal/lead degradation curves, out-of-sample buffer accounting, verified case studies, level-dependent bias scaling).
 - `tests/test_leakage.py`: Zero-leakage perturbation test (50,000 MW perturbation) and cutoff vintage isolation.
 - `tests/test_lead_time_and_boundaries.py`: Forward lead-time bounds assertion, exact cutoff boundary test, post-cutoff perturbation invariance, and FUELHH deduplication.
 - `tests/test_procurement_and_coverage.py`: Mathematical coverage ratio verification, procurement arithmetic, de-biasing volume preservation identity, clipping non-linearity test, and $D-2$ window termination test.
