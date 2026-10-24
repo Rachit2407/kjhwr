@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.app.metrics import (
+    DATA_DIR,
     load_aligned_data,
     load_lead_time_records,
     get_day_ahead_slice,
@@ -37,7 +38,7 @@ LEAD_TIME_RECORDS = load_lead_time_records()
 
 _local_data = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
 _root_data = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
-DATA_DIR = _local_data if os.path.exists(_local_data) else _root_data
+# DATA_DIR imported from metrics
 HH_PATH = os.path.join(DATA_DIR, "half_hourly_actuals.json")
 HALF_HOURLY_ACTUALS = {}
 if os.path.exists(HH_PATH):

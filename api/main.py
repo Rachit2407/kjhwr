@@ -1,15 +1,47 @@
 """
-Public API Gateway Service for WindCast UK.
-Receives incoming public requests and proxies to the internal backend service
-using the BACKEND_URL service binding injected by Vercel.
+FastAPI Serverless Application for WindCast UK (Vercel Entrypoint).
+Serves Day-Ahead Decisions, Accuracy Benchmarks, and Procurement Risk Simulator
+directly with zero-latency in-memory data processing.
 """
 
 import os
-import httpx
-from fastapi import FastAPI, Request, Response
+import sys
+import json
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="WindCast UK API Gateway", version="1.0.0")
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+if cur_dir not in sys.path:
+    sys.path.insert(0, cur_dir)
+
+try:
+    from api.metrics import (
+        DATA_DIR,
+        load_aligned_data,
+        load_lead_time_records,
+        get_day_ahead_slice,
+        compute_summary_kpis,
+        compute_diurnal_breakdown,
+        compute_rolling_risk_buffer,
+        compute_lead_time_curve
+    )
+except ImportError:
+    from metrics import (
+        DATA_DIR,
+        load_aligned_data,
+        load_lead_time_records,
+        get_day_ahead_slice,
+        compute_summary_kpis,
+        compute_diurnal_breakdown,
+        compute_rolling_risk_buffer,
+        compute_lead_time_curve
+    )
+
+app = FastAPI(
+    title="UK Wind Day-Ahead Decision & Accuracy Platform",
+    description="Elexon BMRS Wind Generation Decision & Forecast Accuracy Engine for UK Day-Ahead Procurement",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,51 +51,237 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Vercel injects the internal backend service URL into BACKEND_URL via bindings
-BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000").rstrip("/")
+ALIGNED_DATA = load_aligned_data()
+LEAD_TIME_RECORDS = load_lead_time_records()
 
-@app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"])
-async def proxy_gateway(request: Request, full_path: str):
-    # Normalize path: ensure request is routed to /api/{subpath} on internal backend
-    if full_path.startswith("api/"):
-        target_path = full_path
-    elif full_path == "health":
-        target_path = "api/health"
-    elif full_path:
-        target_path = f"api/{full_path}"
-    else:
-        target_path = "api/health"
+HH_PATH = os.path.join(DATA_DIR, "half_hourly_actuals.json")
+HALF_HOURLY_ACTUALS = {}
+if os.path.exists(HH_PATH):
+    with open(HH_PATH, "r", encoding="utf-8") as f:
+        HALF_HOURLY_ACTUALS = json.load(f)
 
-    target_url = f"{BACKEND_URL}/{target_path}"
-    if request.url.query:
-        target_url += f"?{request.url.query}"
+SUPPORTED_CUTOFFS = ["9", "11", "12", "14", "17", "23"]
+
+def _health_response():
+    return {
+        "status": "healthy",
+        "dataset": "Elexon BMRS (FUELHH WIND & WINDFOR)",
+        "scope": "National GB Wind Power (January 2026 Decisions)",
+        "totalHourlyRows": len(ALIGNED_DATA),
+        "leadTimeRecords": len(LEAD_TIME_RECORDS),
+        "supportedCutoffs": SUPPORTED_CUTOFFS,
+        "defaultCutoff": "11"
+    }
+
+@app.get("/api/health")
+@app.get("/health")
+def health():
+    return _health_response()
+
+def _day_ahead_handler(date: str, cutoff: str):
+    if cutoff not in SUPPORTED_CUTOFFS:
+        raise HTTPException(status_code=400, detail=f"Cutoff {cutoff} not supported. Use one of {SUPPORTED_CUTOFFS}")
         
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        body = await request.body()
-        headers = {k: v for k, v in request.headers.items() if k.lower() not in ["host", "content-length"]}
+    day_records = [
+        d for d in ALIGNED_DATA 
+        if d['deliveryDate'] == date 
+        and d['cutoffs'].get(cutoff) is not None
+    ]
+    
+    if not day_records:
+        raise HTTPException(status_code=404, detail=f"No data available for delivery date {date}")
         
-        try:
-            resp = await client.request(
-                method=request.method,
-                url=target_url,
-                headers=headers,
-                content=body
-            )
+    day_records.sort(key=lambda x: x['hourOfDay'])
+    
+    hours_output = []
+    acts, fcsts, errors = [], [], []
+    
+    for r in day_records:
+        c_info = r['cutoffs'][cutoff]
+        act = r['actualMW']
+        fcst = c_info['forecastMW']
+        err = c_info['errorMW']
+        acts.append(act)
+        fcsts.append(fcst)
+        errors.append(err)
+        
+        hours_output.append({
+            "hour": r['hourOfDay'],
+            "startTime": r['startTime'],
+            "actualMW": act,
+            "forecastMW": fcst,
+            "errorMW": err,
+            "publishTime": c_info['publishTime'],
+            "leadTimeHours": c_info['leadTimeHours'],
+            "baseline48h": r['baseline48h'],
+            "baseline7dMean": r['baseline7dMean']
+        })
+        
+    hh_points = []
+    for sp in range(1, 49):
+        sp_hour = (sp - 1) // 2
+        sp_min = 30 if (sp % 2 == 0) else 0
+        iso_key = f"{date}T{sp_hour:02d}:{sp_min:02d}:00Z"
+        val = HALF_HOURLY_ACTUALS.get(iso_key)
+        hh_points.append({
+            "settlementPeriod": sp,
+            "time": f"{sp_hour:02d}:{sp_min:02d}",
+            "actualMW": val
+        })
+        
+    return {
+        "deliveryDate": date,
+        "decisionDate": day_records[0]['decisionDate'],
+        "cutoffHour": int(cutoff),
+        "cutoffRule": f"Latest forecast published <= {day_records[0]['decisionDate']}T{int(cutoff):02d}:00:00Z",
+        "kpis": {
+            "totalActualMWh": round(sum(acts), 1),
+            "totalForecastMWh": round(sum(fcsts), 1),
+            "dayMaeMW": round(sum(abs(e) for e in errors) / len(errors), 1),
+            "peakActualMW": max(acts),
+            "peakForecastMW": max(fcsts),
+            "minActualMW": min(acts),
+            "minForecastMW": min(fcsts)
+        },
+        "hourly": hours_output,
+        "halfHourlyActuals": hh_points
+    }
+
+@app.get("/api/day-ahead")
+@app.get("/day-ahead")
+def get_day_ahead(
+    date: str = Query("2026-01-15", description="Target delivery date (YYYY-MM-DD)"),
+    cutoff: str = Query("11", description="Day-ahead cutoff hour on D-1")
+):
+    return _day_ahead_handler(date, cutoff)
+
+def _accuracy_summary_handler(cutoff: str):
+    if cutoff not in SUPPORTED_CUTOFFS:
+        raise HTTPException(status_code=400, detail=f"Cutoff {cutoff} not supported")
+        
+    records = get_day_ahead_slice(ALIGNED_DATA, cutoff=cutoff)
+    kpis = compute_summary_kpis(records)
+    diurnal = compute_diurnal_breakdown(records)
+    
+    return {
+        "cutoffHour": int(cutoff),
+        "evaluationWindow": {
+            "decisionsPeriod": "2026-01-01 to 2026-01-31 (Day D-1)",
+            "deliveryPeriod": "2026-01-02 to 2026-02-01 (Day D)",
+            "totalHours": len(records)
+        },
+        "summary": kpis,
+        "diurnalProfile": diurnal
+    }
+
+@app.get("/api/accuracy/summary")
+@app.get("/accuracy/summary")
+def get_accuracy_summary(
+    cutoff: str = Query("11", description="Day-ahead cutoff hour on D-1")
+):
+    return _accuracy_summary_handler(cutoff)
+
+def _lead_time_handler():
+    curve = compute_lead_time_curve(LEAD_TIME_RECORDS, bin_size_hours=6)
+    return {
+        "description": "Accuracy degradation by lead time across ALL forward forecast vintages (0.5h to 66.5h) in January 2026",
+        "totalObservations": len(LEAD_TIME_RECORDS),
+        "curve": curve
+    }
+
+@app.get("/api/accuracy/lead-time")
+@app.get("/accuracy/lead-time")
+def get_lead_time_analysis():
+    return _lead_time_handler()
+
+def _procurement_handler(cutoff: str, demand_mw: float, quantile: float, bias_correction: bool, date: str):
+    if cutoff not in SUPPORTED_CUTOFFS:
+        raise HTTPException(status_code=400, detail=f"Cutoff {cutoff} not supported")
+    if not (0.50 <= quantile <= 0.99):
+        raise HTTPException(status_code=400, detail="Quantile must be between 0.50 and 0.99")
+        
+    buffer_res = compute_rolling_risk_buffer(
+        ALIGNED_DATA,
+        cutoff=cutoff,
+        quantile_level=quantile,
+        apply_bias_correction=bias_correction
+    )
+    
+    if date:
+        day_match = next((d for d in buffer_res['daily'] if d['date'] == date), None)
+        if not day_match:
+            raise HTTPException(status_code=404, detail=f"Date {date} not in evaluated January delivery window")
             
-            resp_headers = {
-                k: v for k, v in resp.headers.items() 
-                if k.lower() not in ["content-encoding", "transfer-encoding", "content-length"]
+        enriched_hours = []
+        for h in day_match['hours']:
+            act = h['actualMW']
+            fcst = h.get('hedgedForecastMW', h['forecastMW'])
+            buf = h['bufferMW']
+            
+            base_proc = max(0.0, demand_mw - fcst)
+            total_proc = base_proc + buf
+            act_res = max(0.0, demand_mw - act)
+            imbalance = total_proc - act_res
+            
+            enriched_hours.append({
+                "hour": h['hour'],
+                "startTime": h['startTime'],
+                "actualWindMW": act,
+                "forecastWindMW": h['forecastMW'],
+                "hedgedForecastMW": fcst,
+                "demandMW": demand_mw,
+                "baseProcurementMW": round(base_proc, 1),
+                "riskBufferMW": round(buf, 1),
+                "totalProcuredMW": round(total_proc, 1),
+                "actualResidualDemandMW": round(act_res, 1),
+                "netImbalanceMW": round(imbalance, 1),
+                "shortfallMW": h['shortfallMW'],
+                "isCovered": h['isCovered'],
+                "regime": h['regime']
+            })
+            
+        return {
+            "date": date,
+            "demandMW": demand_mw,
+            "riskQuantile": quantile,
+            "biasCorrectionApplied": bias_correction,
+            "isWarmup": day_match['isWarmup'],
+            "dayCoveragePercent": day_match['dayCoveragePercent'],
+            "avgBufferMW": day_match['avgBufferMW'],
+            "hours": enriched_hours
+        }
+        
+    return {
+        "cutoffHour": int(cutoff),
+        "demandMW": demand_mw,
+        "riskQuantile": quantile,
+        "biasCorrectionApplied": bias_correction,
+        "nominalCoveragePercent": buffer_res['nominalCoveragePercent'],
+        "overallCoveragePercent": buffer_res['overallCoveragePercent'],
+        "postWarmupCoveragePercent": buffer_res['postWarmupCoveragePercent'],
+        "shortfallOnlyCoveragePercent": buffer_res['shortfallOnlyCoveragePercent'],
+        "averageBufferMW": buffer_res['averageBufferMW'],
+        "meanUncoveredShortfallMW": buffer_res['meanUncoveredShortfallMW'],
+        "totalEvaluatedHours": buffer_res['totalHours'],
+        "weeklyBreakdown": buffer_res['weeklyBreakdown'],
+        "dailySummary": [
+            {
+                "date": d['date'],
+                "isWarmup": d['isWarmup'],
+                "avgBufferMW": d['avgBufferMW'],
+                "coveragePercent": d['dayCoveragePercent']
             }
-            
-            return Response(
-                content=resp.content,
-                status_code=resp.status_code,
-                headers=resp_headers,
-                media_type=resp.headers.get("content-type")
-            )
-        except Exception as e:
-            return Response(
-                content=f'{{"error": "Failed to reach internal backend service", "details": "{str(e)}", "backendUrl": "{BACKEND_URL}"}}',
-                status_code=502,
-                media_type="application/json"
-            )
+            for d in buffer_res['daily']
+        ]
+    }
+
+@app.get("/api/procurement/simulate")
+@app.get("/procurement/simulate")
+def simulate_procurement(
+    cutoff: str = Query("11", description="Cutoff hour on D-1"),
+    demand_mw: float = Query(30000.0, description="Illustrative consumer demand baseline (MW)"),
+    quantile: float = Query(0.90, description="Risk confidence quantile (0.50 to 0.99)"),
+    bias_correction: bool = Query(False, description="Apply rolling bias correction"),
+    date: str = Query(None, description="Optional single delivery date (YYYY-MM-DD)")
+):
+    return _procurement_handler(cutoff, demand_mw, quantile, bias_correction, date)

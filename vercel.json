@@ -3,15 +3,7 @@
   "services": {
     "api": {
       "root": "api",
-      "framework": "fastapi",
-      "bindings": [
-        {
-          "type": "service",
-          "service": "backend",
-          "format": "url",
-          "env": "BACKEND_URL"
-        }
-      ]
+      "framework": "fastapi"
     },
     "backend": {
       "root": "backend",
