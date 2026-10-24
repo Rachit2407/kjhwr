@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Activity, ShieldCheck, Wind, ExternalLink, Info } from 'lucide-react';
 import DayAheadView from './components/DayAheadView';
 import AccuracyLab from './components/AccuracyLab';
 import ProcurementSim from './components/ProcurementSim';
@@ -9,77 +8,88 @@ export default function App() {
   const [selectedCutoff, setSelectedCutoff] = useState('11');
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
-      {/* Top Navigation Bar */}
-      <header className="border-b border-slate-200 bg-white sticky top-0 z-50 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-md bg-blue-700 text-white flex items-center justify-center shadow-xs">
-              <Wind className="w-5 h-5" />
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans">
+      {/* Institutional Top Header */}
+      <header className="border-b border-slate-300 bg-white sticky top-0 z-50">
+        {/* System Bar */}
+        <div className="border-b border-slate-200 bg-slate-900 text-slate-200 px-4 py-1.5 text-[11px] font-mono">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-3">
+              <span className="font-bold text-white tracking-wider">UK DAM OPERATIONS</span>
+              <span className="text-slate-400">|</span>
+              <span>SYSTEM: NATIONAL GRID ESO & ELEXON BMRS</span>
+              <span className="text-slate-400">|</span>
+              <span>AUDIT WINDOW: 2026-01-01 TO 2026-02-01</span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-base tracking-tight text-slate-900">WindCast UK</span>
-                <span className="text-[11px] font-medium tracking-wide px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
-                  Day-Ahead Wholesale
-                </span>
-              </div>
-              <p className="text-xs text-slate-500">
-                UK Day-Ahead Market Wind Decision Support & Forecast Accuracy Engine
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-              <span>Elexon BMRS Live Audit: Jan 2026</span>
+            <div className="flex items-center gap-3">
+              <span className="text-emerald-400 font-semibold">FEED: ONLINE (744 INTERVALS)</span>
+              <span className="text-slate-400">|</span>
+              <span>BENCHMARK CUTOFF: 11:00 UTC</span>
             </div>
           </div>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-1 border-t border-slate-100 overflow-x-auto">
+        {/* Main Branding Bar */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-lg tracking-tight text-slate-950 font-sans">
+                WindCast UK
+              </span>
+              <span className="text-[11px] font-mono uppercase bg-slate-200 text-slate-800 px-2 py-0.5 border border-slate-300">
+                Decision Support Terminal
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 mt-0.5">
+              Wholesale Day-Ahead Power Procurement & Wind Forecast Risk Analytics
+            </p>
+          </div>
+
+          <div className="text-right text-xs font-mono text-slate-600 hidden sm:block">
+            <div>DATASET: ELEXON FUELHH (WIND) & WINDFOR</div>
+            <div className="text-[11px] text-slate-500">SCOPE: NATIONAL GB WIND GENERATION</div>
+          </div>
+        </div>
+
+        {/* Flat Enterprise Tab Navigation */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex border-t border-slate-200 overflow-x-auto">
           <button
             onClick={() => setActiveTab('day-ahead')}
-            className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap transition-colors ${
+            className={`py-2.5 px-4 font-semibold text-xs tracking-wider uppercase border-b-2 whitespace-nowrap transition-none ${
               activeTab === 'day-ahead'
-                ? 'border-blue-700 text-blue-700 bg-blue-50/40'
-                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+                ? 'border-blue-800 text-blue-900 bg-slate-50'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
-            <LayoutDashboard className="w-4 h-4" />
-            <span>Day-Ahead Decision Desk</span>
+            1. Day-Ahead Decision Desk
           </button>
 
           <button
             onClick={() => setActiveTab('accuracy')}
-            className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap transition-colors ${
+            className={`py-2.5 px-4 font-semibold text-xs tracking-wider uppercase border-b-2 whitespace-nowrap transition-none ${
               activeTab === 'accuracy'
-                ? 'border-blue-700 text-blue-700 bg-blue-50/40'
-                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+                ? 'border-blue-800 text-blue-900 bg-slate-50'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
-            <Activity className="w-4 h-4" />
-            <span>Forecast Accuracy Lab</span>
+            2. Forecast Accuracy Lab
           </button>
 
           <button
             onClick={() => setActiveTab('procurement')}
-            className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap transition-colors ${
+            className={`py-2.5 px-4 font-semibold text-xs tracking-wider uppercase border-b-2 whitespace-nowrap transition-none ${
               activeTab === 'procurement'
-                ? 'border-blue-700 text-blue-700 bg-blue-50/40'
-                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+                ? 'border-blue-800 text-blue-900 bg-slate-50'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Procurement & Risk Simulator</span>
+            3. Procurement & Risk Simulator
           </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Main Trading Desk Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5">
         {activeTab === 'day-ahead' && (
           <DayAheadView
             selectedCutoff={selectedCutoff}
@@ -100,20 +110,18 @@ export default function App() {
         )}
       </main>
 
-      {/* Institutional Footer */}
-      <footer className="border-t border-slate-200 bg-white mt-auto py-5 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+      {/* Institutional Enterprise Footer */}
+      <footer className="border-t border-slate-300 bg-white mt-auto py-3 text-xs text-slate-600 font-mono">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            <span className="font-semibold text-slate-700">
-              Full Stack SWE Challenge Submission
+            <span className="font-bold text-slate-800">
+              UK WHOLESALE POWER TRADING PLATFORM
             </span>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Strictly Elexon BMRS data (FUELHH WIND & WINDFOR). No external demand or pricing data.
-            </p>
+            <span className="mx-2 text-slate-400">|</span>
+            <span>STRICTLY ELEXON BMRS FUELHH & WINDFOR FEEDS</span>
           </div>
           <div className="text-right text-[11px] text-slate-500">
-            <div>Built with React + Python FastAPI + Docker</div>
-            <div className="mt-0.5">AI Tools Disclosure: Built with Google DeepMind Antigravity</div>
+            <span>React + Python FastAPI | Google DeepMind Antigravity AI Disclosure</span>
           </div>
         </div>
       </footer>
