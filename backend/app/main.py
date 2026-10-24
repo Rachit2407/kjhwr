@@ -35,7 +35,9 @@ app.add_middleware(
 ALIGNED_DATA = load_aligned_data()
 LEAD_TIME_RECORDS = load_lead_time_records()
 
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
+_local_data = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+_root_data = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
+DATA_DIR = _local_data if os.path.exists(_local_data) else _root_data
 HH_PATH = os.path.join(DATA_DIR, "half_hourly_actuals.json")
 HALF_HOURLY_ACTUALS = {}
 if os.path.exists(HH_PATH):

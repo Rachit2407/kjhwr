@@ -9,7 +9,9 @@ import json
 import numpy as np
 from datetime import datetime, timedelta
 
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
+_local_data = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+_root_data = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
+DATA_DIR = _local_data if os.path.exists(_local_data) else _root_data
 
 def load_aligned_data():
     path = os.path.join(DATA_DIR, "aligned_day_ahead.json")
