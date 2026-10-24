@@ -115,4 +115,4 @@
   * Dockerized via multi-stage `Dockerfile`: Node 22 builds React, Python 3.12 runs FastAPI serving both `/api` endpoints and static SPA.
   * Serverless deployment on Vercel: in-memory vectorized NumPy execution with self-contained dataset ($<4\text{ MB}$ total).
   * Only `fastapi` and `numpy` in runtime—zero heavy pandas/pyarrow dependencies in serverless.
-  * Public repository with anonymous repo name `kjhwr` and complete AI disclosure.
+  * Public repository with anonymous repo name `kmunlx` and complete AI disclosure.
