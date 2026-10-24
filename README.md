@@ -182,10 +182,10 @@ python -m pytest
 
 ---
 
-## 7. Cloud Deployment Link
+## 7. Cloud Deployment & Public Repository
 
-- **Live Deployed App**: `[DEPLOYED_APP_URL_HERE]` (Configured for Vercel & Heroku)
-
+- **GitHub Repository**: [https://github.com/Rachit2407/kjhwr](https://github.com/Rachit2407/kjhwr)
+- **Live Deployed App**: [https://kjhwr.vercel.app](https://kjhwr.vercel.app) (Configured for Vercel)
 ---
 
 ## 8. AI Tools Disclosure
