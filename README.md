@@ -186,7 +186,7 @@ python -m pytest
 ## 7. Cloud Deployment & Public Repository
 
 - **GitHub Repository**: [https://github.com/Rachit2407/kjhwr](https://github.com/Rachit2407/kjhwr)
-- **Live Deployed App**: [https://kjhwr.vercel.app](https://kjhwr.vercel.app) (Configured for Vercel)
+- **Live Deployed App**: [https://kjhwr-five.vercel.app](https://kjhwr-five.vercel.app) (Deployed on Vercel)
 ---
 
 ## 8. AI Tools Disclosure
