@@ -3,7 +3,7 @@
 > **A customized decision support and quantitative forecast accuracy engine for UK Day-Ahead wholesale power procurement.**  
 > Built for the **REint Full Stack SWE Challenge**.
 
-[![Pytest Tests](https://img.shields.io/badge/pytest-23%20passed-emerald)](tests/)
+[![Pytest Tests](https://img.shields.io/badge/pytest-24%20passed-emerald)](tests/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](Dockerfile)
 [![License](https://img.shields.io/badge/license-MIT-slate)](LICENSE)
 
@@ -171,13 +171,14 @@ Access the application at `http://localhost:8000`.
 python -m pytest
 ```
 
-23 passing unit tests:
+24 passing unit tests:
 - `tests/test_leakage.py`: Zero-leakage perturbation test (50,000 MW perturbation) and cutoff vintage isolation.
 - `tests/test_lead_time_and_boundaries.py`: Forward lead-time bounds assertion, exact cutoff boundary test, post-cutoff perturbation invariance, and FUELHH deduplication.
 - `tests/test_procurement_and_coverage.py`: Mathematical coverage ratio verification, procurement arithmetic, de-biasing volume preservation identity, and $D-2$ window termination test.
 - `tests/test_edge_cases.py`: Calm zero-wind handling and missing interval NaN checks.
 - `tests/test_metrics.py`: Mathematical verification of formulas against hand-calculated test vectors.
 - `tests/test_hourly_aggregation.py`: Settlement period pair averaging.
+- `tests/test_gateway_proxy.py`: API Gateway proxy route handling and resilience.
 - `tests/test_api.py`: FastAPI endpoint smoke tests.
 
 ---
