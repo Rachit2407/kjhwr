@@ -105,7 +105,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="space-y-1 text-center sm:text-left">
             <p className="font-semibold text-slate-300">
-              REint Full Stack SWE Challenge Submission
+              Full Stack SWE Challenge Submission
             </p>
             <p className="text-[11px] text-slate-500">
               Strictly Elexon BMRS data (FUELHH WIND & WINDFOR). No external demand or pricing data.

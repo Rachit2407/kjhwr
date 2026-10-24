@@ -67,6 +67,32 @@ def test_bias_correction_hedged_identity():
     
     assert total_unadj == total_corr, "Bias correction must not alter total hedged procurement volume!"
 
+def test_bias_correction_clipping_when_demand_below_forecast():
+    """
+    Verify that when demand < forecast, the max(0, demand - forecast) non-linearity
+    clips base procurement to 0 MW, which breaks the linear additive identity.
+    """
+    demand = 10000.0
+    raw_fcst = 14000.0
+    bias = 1500.0
+    raw_buffer = 4000.0
+    debiased_buffer = raw_buffer - bias # 2500
+    debiased_fcst = raw_fcst - bias     # 12500
+    
+    # 1. Unadjusted (demand < raw_fcst -> clipped to 0)
+    base_unadj = max(0.0, demand - raw_fcst)     # max(0, -4000) = 0
+    total_unadj = base_unadj + raw_buffer        # 0 + 4000 = 4000
+    
+    # 2. De-biased (demand < debiased_fcst -> clipped to 0)
+    base_corr = max(0.0, demand - debiased_fcst) # max(0, -2500) = 0
+    total_corr = base_corr + debiased_buffer     # 0 + 2500 = 2500
+    
+    # Because base procurement clipped at 0 in both cases, the de-biased total is lower by exactly bias
+    assert base_unadj == 0.0
+    assert base_corr == 0.0
+    assert total_unadj != total_corr
+    assert total_unadj - total_corr == bias
+
 def test_rolling_window_strictly_ends_at_d_minus_2():
     """
     Verify that the training window for any delivery day D strictly ends at D-2.
