@@ -1,7 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, Component } from 'react';
 import DayAheadView from './components/DayAheadView';
 import AccuracyLab from './components/AccuracyLab';
 import ProcurementSim from './components/ProcurementSim';
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('UI Render Error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-6 bg-red-50 border border-red-300 font-mono text-xs text-red-900 my-4">
+          <div className="font-bold text-sm uppercase tracking-wider mb-2">Workspace Render Exception:</div>
+          <div className="bg-white border border-red-200 p-3 overflow-x-auto text-red-800">
+            {this.state.error?.toString()}
+          </div>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="mt-4 px-3 py-1.5 bg-red-700 text-white font-bold uppercase text-[11px] tracking-wider"
+          >
+            Reset Workspace View
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('day-ahead');
@@ -90,24 +122,26 @@ export default function App() {
 
       {/* Main Trading Desk Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5">
-        {activeTab === 'day-ahead' && (
-          <DayAheadView
-            selectedCutoff={selectedCutoff}
-            onCutoffChange={setSelectedCutoff}
-          />
-        )}
-        {activeTab === 'accuracy' && (
-          <AccuracyLab
-            selectedCutoff={selectedCutoff}
-            onCutoffChange={setSelectedCutoff}
-          />
-        )}
-        {activeTab === 'procurement' && (
-          <ProcurementSim
-            selectedCutoff={selectedCutoff}
-            onCutoffChange={setSelectedCutoff}
-          />
-        )}
+        <ErrorBoundary>
+          {activeTab === 'day-ahead' && (
+            <DayAheadView
+              selectedCutoff={selectedCutoff}
+              onCutoffChange={setSelectedCutoff}
+            />
+          )}
+          {activeTab === 'accuracy' && (
+            <AccuracyLab
+              selectedCutoff={selectedCutoff}
+              onCutoffChange={setSelectedCutoff}
+            />
+          )}
+          {activeTab === 'procurement' && (
+            <ProcurementSim
+              selectedCutoff={selectedCutoff}
+              onCutoffChange={setSelectedCutoff}
+            />
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* Institutional Enterprise Footer */}

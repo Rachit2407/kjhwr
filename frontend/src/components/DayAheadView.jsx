@@ -315,7 +315,7 @@ export default function DayAheadView({ selectedCutoff, onCutoffChange }) {
                       {row.hour}:00
                     </td>
                     <td className="py-1.5 px-3 border-r border-slate-200 text-slate-600">
-                      HH {row.settlementPeriods.join(' & ')}
+                      SP {row.hour * 2 + 1} & {row.hour * 2 + 2}
                     </td>
                     <td className="py-1.5 px-3 border-r border-slate-200 text-right text-slate-900 font-bold">
                       {row.actualMW.toLocaleString()}
