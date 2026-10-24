@@ -8,6 +8,9 @@ __pycache__/
 
 # Production build outputs
 frontend/dist/
+dist/
+*.map
+.vercel/
 
 # Raw multi-gigabyte cache (we keep the clean pre-computed aligned JSONs)
 data/raw_fuelhh_wind.json

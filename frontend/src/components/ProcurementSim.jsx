@@ -69,7 +69,7 @@ export default function ProcurementSim({ selectedCutoff, onCutoffChange }) {
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Translating quantified forecast error into an actionable hedging strategy to prevent expensive cashout shortfall penalties
+              Translating quantified forecast error into a hedging strategy to manage wholesale day-ahead imbalance exposure
             </p>
           </div>
 
@@ -137,9 +137,9 @@ export default function ProcurementSim({ selectedCutoff, onCutoffChange }) {
 
           <div>
             <div className="flex justify-between items-center text-xs text-slate-300 font-medium mb-1">
-              <span>Rolling Bias Correction:</span>
+              <span>Separate Bias from Buffer:</span>
               <span className={`text-[11px] font-bold ${biasCorrection ? 'text-cyan-400' : 'text-slate-500'}`}>
-                {biasCorrection ? 'Active (-1 GW Buffer)' : 'Off (Unadjusted)'}
+                {biasCorrection ? 'Separated' : 'Combined (Default)'}
               </span>
             </div>
             <button
@@ -151,10 +151,10 @@ export default function ProcurementSim({ selectedCutoff, onCutoffChange }) {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              {biasCorrection ? 'De-biasing Enabled' : 'Enable Rolling De-biasing'}
+              {biasCorrection ? 'De-biasing Active' : 'Separate Bias & Spread'}
             </button>
             <span className="text-[11px] text-slate-500">
-              Subtracts D-2 rolling bias; lowers buffer cost
+              Reframing: separates mean offset from residual volatility (same total volume)
             </span>
           </div>
 
@@ -174,23 +174,23 @@ export default function ProcurementSim({ selectedCutoff, onCutoffChange }) {
               <button
                 onClick={() => setSimDate('2026-01-15')}
                 className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700"
-                title="Jan 15: 100% Coverage Day"
+                title="Jan 15: 100% Coverage Day (3.8 GW Buffer, 0 breaches)"
               >
                 Jan 15 (100% Cov)
               </button>
               <button
                 onClick={() => setSimDate('2026-01-12')}
                 className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-800 text-amber-300 hover:bg-amber-900"
-                title="Jan 12: 6.8 GW Shortfall Storm Day"
+                title="Jan 12: Peak Shortfall Storm Event (6.8 GW Max Miss)"
               >
-                Jan 12 (6.8GW Storm)
+                Jan 12 (6.8GW Miss)
               </button>
               <button
                 onClick={() => setSimDate('2026-01-28')}
                 className="text-[10px] px-1.5 py-0.5 rounded bg-red-950/80 border border-red-800 text-red-300 hover:bg-red-900"
-                title="Jan 28: Severe Tail Anomaly"
+                title="Jan 28: Worst Daily Mean Shortfall (5.4 GW Mean Miss, 24/24 breaches)"
               >
-                Jan 28 (Tail Anomaly)
+                Jan 28 (0% Cov)
               </button>
             </div>
           </div>
@@ -203,16 +203,16 @@ export default function ProcurementSim({ selectedCutoff, onCutoffChange }) {
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <h3 className="text-sm font-semibold text-slate-200">
-              Strictly Out-of-Sample Backtest: Nominal Target vs Realized Coverage
+              Strictly Out-of-Sample Calibration: Nominal Target vs Realized Coverage
             </h3>
           </div>
           <span className="text-xs text-slate-400 font-mono">
-            {overallSim.totalEvaluatedHours} evaluated hours across 31 delivery days
+            Population: 744 evaluated hours across 31 delivery days (Jan 2 – Feb 1, 2026)
           </span>
         </div>
         <p className="text-xs text-slate-400 mb-4">
-          For every day D, the risk buffer is calibrated exclusively on completed delivery days strictly up to D-2 using the same cutoff rule.
-          Because early-January has thin history and real-world wind distributions undergo sharp nonstationary shifts (e.g. storm days), realized coverage differs from nominal target.
+          For every day D, the risk buffer is calibrated strictly on completed delivery days up to D-2 using the same cutoff rule.
+          Because early January has thin history and wind distributions undergo nonstationary weather shifts, realized coverage is 81.0% overall against the nominal 90% target.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -222,7 +222,7 @@ export default function ProcurementSim({ selectedCutoff, onCutoffChange }) {
               {overallSim.overallCoveragePercent}%
             </div>
             <span className="text-[11px] text-slate-400">
-              Target: <span className="text-slate-200 font-semibold">{overallSim.nominalCoveragePercent}% nominal</span> (9% gap across all Jan)
+              Target: <span className="text-slate-200 font-semibold">{overallSim.nominalCoveragePercent}% nominal</span> (9.0% gap across all 31 days)
             </span>
           </div>
 
@@ -232,7 +232,7 @@ export default function ProcurementSim({ selectedCutoff, onCutoffChange }) {
               {overallSim.postWarmupCoveragePercent}%
             </div>
             <span className="text-[11px] text-slate-400">
-              Jan 9 – Feb 1 (excluding Week 1 warm-up noise)
+              Jan 9 – Feb 1 (N=576 hours, excluding Week 1 warm-up)
             </span>
           </div>
 
@@ -242,7 +242,7 @@ export default function ProcurementSim({ selectedCutoff, onCutoffChange }) {
               {overallSim.averageBufferMW.toLocaleString()} <span className="text-xs font-normal text-slate-400">MW</span>
             </div>
             <span className="text-[11px] text-slate-400">
-              {biasCorrection ? 'Saved ~1,000 MW via rolling de-biasing' : 'Insurance margin carried by the utility'}
+              {biasCorrection ? 'Residual volatility buffer (mean offset moved to base)' : 'Combined buffer (absorbing both mean offset and spread)'}
             </span>
           </div>
 
@@ -252,16 +252,19 @@ export default function ProcurementSim({ selectedCutoff, onCutoffChange }) {
               {overallSim.shortfallOnlyCoveragePercent}%
             </div>
             <span className="text-[11px] text-slate-400">
-              Coverage conditioned strictly on error &gt; 0
+              Conditioned strictly on shortfall hours (e &gt; 0, N=649 hours)
             </span>
           </div>
         </div>
 
-        {/* Weekly Learning Table */}
+        {/* Weekly Calibration Table */}
         <div className="mt-4 pt-4 border-t border-slate-800">
-          <h4 className="text-xs font-semibold uppercase text-slate-400 mb-2">
-            Weekly Calibration Evolution (Sample Expansion Learning Curve)
-          </h4>
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="text-xs font-semibold uppercase text-slate-400">
+              Weekly Calibration Evolution (Sample Expansion Learning Curve)
+            </h4>
+            <span className="text-[11px] text-slate-500 italic">*Week 5 is a 3-day sample (N=72h) with high autocorrelation</span>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
             {overallSim.weeklyBreakdown?.map((w, idx) => (
               <div key={idx} className="bg-slate-950/70 border border-slate-800/80 rounded p-2.5 text-center">
@@ -269,7 +272,7 @@ export default function ProcurementSim({ selectedCutoff, onCutoffChange }) {
                 <span className="block text-base font-bold font-mono text-slate-100 mt-1">
                   {w.realizedCoveragePercent}%
                 </span>
-                <span className="block text-[10px] text-slate-500 mt-0.5">Buf: {w.avgBufferMW.toLocaleString()} MW</span>
+                <span className="block text-[10px] text-slate-500 mt-0.5">Avg Buf: {w.avgBufferMW.toLocaleString()} MW</span>
               </div>
             ))}
           </div>
