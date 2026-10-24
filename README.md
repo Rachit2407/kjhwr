@@ -140,7 +140,7 @@ The forecast bias is **proportional/level-dependent** rather than purely a const
 
 ### 2. Decision Cutoff Rules & Forecast Cadence
 
-In the Elexon `WINDFOR` feed, National Grid ESO publishes updates approximately every 4 hours. The available forecast vintages depend on the decision cutoff:
+In the Elexon `WINDFOR` feed, National Grid ESO publishes updates on an **irregular cadence with several runs per day** (in our evaluated dataset: 07:30, 09:30, 11:30, 12:25, 15:30, and 22:30 UTC). The available forecast vintages depend on the decision cutoff:
 
 | Cutoff Hour | Selected Run Vintages (UTC) | Average Lead Time Horizon | January MAE | January Bias |
 | :---: | :---: | :---: | :---: | :---: |

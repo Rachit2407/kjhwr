@@ -37,7 +37,7 @@
 * **Screen**: Interacting with the Delivery Date picker and Cutoff dropdown on the Day-Ahead Decision Desk.
 * **Talking Points**:
   * Look at the Day-Ahead Decision Desk for **January 15, 2026**.
-  * Notice the badge at the top right: at your assumed **11:00 UTC auction cutoff**, the system automatically identifies and locks the most recent forecast vintage published by National Grid ESO—which is the run published at **09:30 UTC** (National Grid ESO publishes approximately every 4 hours, so 09:30 UTC is the latest operative publication before 11:00).
+  * Notice the badge at the top right: at your assumed **11:00 UTC auction cutoff**, the system automatically identifies and locks the most recent forecast vintage published by National Grid ESO—which is the run published at **09:30 UTC** (National Grid ESO publishes on an irregular schedule several times a day, so 09:30 UTC is the latest operative publication before 11:00).
   * On the timeline, the green line is actual wind generation, the cyan dashed line is your day-ahead forecast, and the purple line is the 48-hour persistence baseline.
   * Point out the day's numbers: Peak actual wind was 14.4 GW; the forecast was slightly higher, creating a peak shortfall of **1,941 MW** during the afternoon peak.
   * Contrast this with **January 12, 2026**: a severe winter storm where National Grid forecasted ~18 GW of wind, but output collapsed to ~11 GW—a massive **6,833 MW peak shortfall**.
@@ -50,9 +50,10 @@
 * **Screen**: Switching to the **Procurement & Risk Simulator** tab. Setting demand to 30,000 MW and confidence to P90.
 * **Talking Points**:
   * In the Procurement Simulator, your team enters your consumer demand baseline—let's use 30,000 MW—and selects your desired risk tolerance, such as **P90 shortfall confidence**.
-  * Our engine calculates a **dynamic, rolling risk buffer**. On January 15, the engine recommended carrying an additional **~3,819 MW** of thermal procurement buffer.
-  * Look at the lower chart: the blue bars represent your net imbalance position. Because the desk procured the base thermal requirement **plus the P90 risk buffer**, January 15 achieved **100% coverage (0 breaches across all 24 hours)**.
-  * Be honest about tail risk: on January 12 (17 breaches) and January 28 (24 breaches), extreme weather deviations exceeded historical P90 levels. A statistical buffer manages normal-to-severe volatility, but tail storm anomalies require operational stress-testing.
+  * Our engine calculates a **dynamic, rolling risk buffer**. On January 15, the engine recommended carrying an average of **3,818.9 MW** of thermal procurement buffer.
+  * **Explain the Regime Step (Sawtooth)**: Point out that in hours 0–12, the buffer is **5,465 MW** (High Wind regime, where forecast > historical median), and at hour 13 when wind drops below the median, it steps down to **1,874 MW** (Low Wind regime). Explain this directly as a discrete regime-switching threshold effect reflecting the higher volatility of deep generation periods, not a calculation glitch.
+  * **Be Commercially Honest on the Over-Procurement Tradeoff**: Look at the net imbalance chart: January 15 achieved **100% coverage (0 breaches across all 24 hours)**. But show the flip side to the trader: in hours 0–12, the utility was net long by **+3.5 to +5.1 GW** (netImbalanceMW) against a peak shortfall of only ~1.9 GW. A 100% coverage hedge completely eliminates shortfall risk, but carries commercial thermal commitment costs. This is why our quantile selector lets the desk tune risk tolerance (e.g. testing P80 vs P90).
+  * **Acknowledge Tail Risk & Calibration**: State the numbers plainly: nominal P90 achieves **81.0% realized coverage overall** (84.5% post-warmup), but tail storm events like Jan 12 (17 breaches) and Jan 28 (24 breaches) exceed statistical bounds and require operational stress-testing.
   * Show the **Separate Bias from Buffer** toggle: explain that it is an illustrative diagnostic separating the constant offset from residual volatility, clarifying what portion of procurement is baseline deficit versus volatility insurance.
 
 ---
